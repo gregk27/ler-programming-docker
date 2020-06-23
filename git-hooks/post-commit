@@ -1,0 +1,71 @@
+#!/bin/bash
+
+exec < /dev/tty
+
+# Dont run on amends, prevents looping
+gitCmd=$(ps -ocommand= -p $PPID)
+if [[ "$gitCmd" =~ "--amend"* ]]; then
+    # echo "Commit ammended"
+    exit 0
+fi
+
+users=()
+unames=()
+emails=()
+#Read names
+while IFS=',' read -r col1 col2 col3
+do
+    # echo "$col1|$col2|$col3"
+    users+=($col1)
+    unames+=($col2)
+    emails+=($col3)
+done < /root/users.csv
+
+# Get the name of previous commit author
+prevName=$(git log --format='%an' HEAD~1 -1)
+
+prev=''
+j=0
+for i in ${users[@]}; do
+    if [ "${unames[j]}" == "$prevName" ]; then
+        prev=$i
+    fi
+    j=$j+1
+done
+
+# echo "Done"
+
+#Get user name
+validName=0
+user=''
+uname=''
+email=''
+shopt -s nocasematch
+while [ $validName -eq 0 ]
+do
+    read -p "Commit author [$prev]: " name
+    if [ "$name" == "" ]; then
+        name=$prev
+    fi
+    j=0
+    for i in ${users[@]}
+    do
+        if [[ "$i" == "$name" ]]; then
+            uname="${unames[$j]}"
+            email="${emails[$j]}"
+            validName=1
+        fi
+        j=$j+1
+    done
+    if [ $validName -eq 0 ]; then
+        echo "Unkown name"
+    fi
+done
+
+# Update the commit details
+echo -e "\033[33mCommit author:\033[39m $uname"
+echo -e "\033[33mCommit email :\033[39m $email"
+git commit --amend --author="$uname <$email>" -C HEAD --allow-empty --no-edit --no-post-rewrite -n
+
+# echo "Done"
+exec <&-
