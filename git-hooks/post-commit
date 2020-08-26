@@ -65,7 +65,12 @@ done
 # Update the commit details
 echo -e "\033[33mCommit author:\033[39m $uname"
 echo -e "\033[33mCommit email :\033[39m $email"
-git commit --amend --author="$uname <$email>" -C HEAD --allow-empty --no-edit --no-post-rewrite -n
+git filter-branch -f --env-filter "
+GIT_AUTHOR_NAME=\"$uname\"
+GIT_COMMITTER_NAME=\"$uname\"
+GIT_AUTHOR_EMAIL=\"$email\"
+GIT_COMMITTER_EMAIL=\"$email\"
+" -- HEAD^..
 
 # echo "Done"
 exec <&-
